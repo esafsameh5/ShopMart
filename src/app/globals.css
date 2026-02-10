@@ -192,6 +192,10 @@
   color: #64748b;
 }
 
+.auth-card-wrap .form-label {
+  color: #111827;
+}
+
 .auth-input-wrap {
   position: relative;
 }
@@ -210,6 +214,12 @@
   border-radius: 10px;
   border: 1px solid #d5e2f5;
   height: 46px;
+  color: #111827;
+  background-color: #ffffff;
+}
+
+.auth-input::placeholder {
+  color: #6b7280;
 }
 
 .auth-input:focus {
