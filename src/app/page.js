@@ -1,65 +1,244 @@
-import Image from "next/image";
+"use client";
+
+import Link from "next/link";
+import { useEffect, useMemo, useState } from "react";
+import { useAuth } from "@/context/AuthContext";
+import { useLoading } from "@/context/LoadingContext";
+import { getProducts } from "@/services/productService";
+import { getCategories } from "@/services/categoryService";
+import { getBrands } from "@/services/brandService";
 
 export default function Home() {
+  const { user } = useAuth();
+  const { showLoader, hideLoader } = useLoading();
+  const [products, setProducts] = useState([]);
+  const [categories, setCategories] = useState([]);
+  const [brands, setBrands] = useState([]);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    async function fetchHomeData() {
+      setError("");
+      showLoader();
+
+      try {
+        const [productsData, categoriesData, brandsData] =
+          await Promise.all([
+            getProducts(),
+            getCategories(),
+            getBrands(),
+          ]);
+
+        setProducts(Array.isArray(productsData) ? productsData : []);
+        setCategories(
+          Array.isArray(categoriesData) ? categoriesData : []
+        );
+        setBrands(Array.isArray(brandsData) ? brandsData : []);
+      } catch {
+        setError("Failed to load homepage data.");
+      } finally {
+        hideLoader();
+      }
+    }
+
+    fetchHomeData();
+  }, []);
+
+  const featuredProducts = useMemo(
+    () => products.slice(0, 8),
+    [products]
+  );
+  const topCategories = useMemo(
+    () => categories.slice(0, 6),
+    [categories]
+  );
+  const topBrands = useMemo(() => brands.slice(0, 8), [brands]);
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.js file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+    <main className="home-page">
+      <section className="home-hero">
+        <div className="container">
+          <div className="row align-items-center g-4">
+            <div className="col-lg-7">
+              <p className="home-eyebrow mb-2">Shop Smarter Daily</p>
+              <h1 className="home-title mb-3">
+                Everything You Need,
+                <span> Delivered in Style.</span>
+              </h1>
+              <p className="home-subtitle mb-4">
+                Discover trending products, top brands, and categories
+                hand-picked for your next order.
+              </p>
+
+              <div className="d-flex flex-wrap gap-2">
+                <Link href="/products" className="btn home-btn-primary">
+                  Shop Now
+                </Link>
+                <Link
+                  href={user ? "/wishlist" : "/auth/login"}
+                  className="btn home-btn-ghost"
+                >
+                  {user ? "My Wishlist" : "Start with Login"}
+                </Link>
+              </div>
+            </div>
+
+            <div className="col-lg-5">
+              <div className="hero-panel">
+                <div className="hero-stat">
+                  <span>{products.length}+</span>
+                  <p>Products</p>
+                </div>
+                <div className="hero-stat">
+                  <span>{categories.length}+</span>
+                  <p>Categories</p>
+                </div>
+                <div className="hero-stat">
+                  <span>{brands.length}+</span>
+                  <p>Brands</p>
+                </div>
+                <p className="hero-note mb-0">
+                  {user
+                    ? `Welcome back, ${user.name}`
+                    : "Create an account to track your cart and wishlist."}
+                </p>
+              </div>
+            </div>
+          </div>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+      </section>
+
+      <section className="home-section">
+        <div className="container">
+          <div className="section-head">
+            <h2>Featured Products</h2>
+            <Link href="/products" className="section-link">
+              View all
+            </Link>
+          </div>
+
+          {error && (
+            <div className="alert alert-danger py-2 mb-4">{error}</div>
+          )}
+
+          <div className="row g-4">
+            {featuredProducts.length === 0 ? (
+              <div className="col-12">
+                <p className="text-muted mb-0">
+                  No products available right now.
+                </p>
+              </div>
+            ) : (
+              featuredProducts.map((product) => (
+                <div key={product._id} className="col-sm-6 col-lg-3">
+                  <Link
+                    href={`/products/${product._id}`}
+                    className="home-product-card"
+                  >
+                    <img
+                      src={product.imageCover}
+                      alt={product.title}
+                      className="home-product-image"
+                    />
+                    <div className="p-3">
+                      <p className="home-product-category mb-1">
+                        {product.category?.name || "General"}
+                      </p>
+                      <h3 className="home-product-title">
+                        {product.title}
+                      </h3>
+                      <p className="home-product-price mb-0">
+                        {product.price} EGP
+                      </p>
+                    </div>
+                  </Link>
+                </div>
+              ))
+            )}
+          </div>
         </div>
-      </main>
-    </div>
+      </section>
+
+      <section className="home-section home-section-soft">
+        <div className="container">
+          <div className="section-head">
+            <h2>Top Categories</h2>
+            <Link href="/categories" className="section-link">
+              View all
+            </Link>
+          </div>
+          <div className="row g-3">
+            {topCategories.length === 0 ? (
+              <div className="col-12">
+                <p className="text-muted mb-0">
+                  Categories will appear here soon.
+                </p>
+              </div>
+            ) : (
+              topCategories.map((category) => (
+                <div key={category._id} className="col-6 col-md-4 col-lg-2">
+                  <Link
+                    href={`/categories/${category._id}`}
+                    className="category-chip text-decoration-none d-block"
+                  >
+                    <span>{category.name}</span>
+                  </Link>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      </section>
+
+      <section className="home-section">
+        <div className="container">
+          <div className="section-head">
+            <h2>Trusted Brands</h2>
+            <Link href="/brands" className="section-link">
+              View all
+            </Link>
+          </div>
+          <div className="row g-3">
+            {topBrands.length === 0 ? (
+              <div className="col-12">
+                <p className="text-muted mb-0">
+                  Brands will appear here soon.
+                </p>
+              </div>
+            ) : (
+              topBrands.map((brand) => (
+                <div key={brand._id} className="col-6 col-md-3">
+                  <Link
+                    href={`/brands/${brand._id}`}
+                    className="brand-card text-decoration-none"
+                  >
+                    <img
+                      src={brand.image}
+                      alt={brand.name}
+                      className="brand-image"
+                    />
+                    <p className="mb-0">{brand.name}</p>
+                  </Link>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      </section>
+
+      <section className="home-section">
+        <div className="container">
+          <div className="home-cta">
+            <h2 className="mb-2">Ready to build your next order?</h2>
+            <p className="mb-3">
+              Explore fresh deals and complete your cart in minutes.
+            </p>
+            <Link href="/products" className="btn home-btn-primary">
+              Explore Products
+            </Link>
+          </div>
+        </div>
+      </section>
+    </main>
   );
 }
