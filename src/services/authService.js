@@ -8,6 +8,13 @@ async function parseJsonSafe(response) {
   }
 }
 
+function generateAutoPhone() {
+  const suffix = Math.floor(Math.random() * 100000000)
+    .toString()
+    .padStart(8, "0");
+  return `010${suffix}`;
+}
+
 export async function registerUser(data) {
   try {
     const response = await fetch(`${BASE_URL}/auth/signup`, {
@@ -20,7 +27,7 @@ export async function registerUser(data) {
         email: data.email,
         password: data.password,
         rePassword: data.rePassword,
-        phone: "01000000000",
+        phone: generateAutoPhone(),
       }),
     });
 
