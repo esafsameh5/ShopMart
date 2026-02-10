@@ -1,24 +1,34 @@
 "use client";
 
-import { createContext, useContext, useState } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useMemo,
+  useState,
+} from "react";
 
 const LoadingContext = createContext();
 
 export function LoadingProvider({ children }) {
-  const [loading, setLoading] = useState(false);
+  const [pendingCount, setPendingCount] = useState(0);
+  const loading = pendingCount > 0;
 
-  function showLoader() {
-    setLoading(true);
-  }
+  const showLoader = useCallback(() => {
+    setPendingCount((count) => count + 1);
+  }, []);
 
-  function hideLoader() {
-    setLoading(false);
-  }
+  const hideLoader = useCallback(() => {
+    setPendingCount((count) => Math.max(0, count - 1));
+  }, []);
+
+  const value = useMemo(
+    () => ({ loading, showLoader, hideLoader }),
+    [loading, showLoader, hideLoader]
+  );
 
   return (
-    <LoadingContext.Provider
-      value={{ loading, showLoader, hideLoader }}
-    >
+    <LoadingContext.Provider value={value}>
       {children}
     </LoadingContext.Provider>
   );
