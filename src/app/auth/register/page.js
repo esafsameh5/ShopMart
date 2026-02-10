@@ -11,6 +11,7 @@ export default function RegisterPage() {
   const [formData, setFormData] = useState({
     name: "",
     email: "",
+    phone: "",
     password: "",
     rePassword: "",
   });
@@ -26,6 +27,20 @@ export default function RegisterPage() {
     }));
   }
 
+  function normalizeEgyptPhone(phone) {
+    const cleaned = phone.trim().replace(/[\s-]/g, "");
+
+    if (/^01[0125][0-9]{8}$/.test(cleaned)) {
+      return cleaned;
+    }
+
+    if (/^\+?201[0125][0-9]{8}$/.test(cleaned)) {
+      return `0${cleaned.replace(/^\+?20/, "")}`;
+    }
+
+    return null;
+  }
+
   function validateForm() {
     const newErrors = {};
 
@@ -37,6 +52,12 @@ export default function RegisterPage() {
       newErrors.email = "Email is required";
     } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
       newErrors.email = "Invalid email format";
+    }
+
+    if (!formData.phone) {
+      newErrors.phone = "Phone is required";
+    } else if (!normalizeEgyptPhone(formData.phone)) {
+      newErrors.phone = "Enter a valid Egyptian mobile number";
     }
 
     if (!formData.password) {
@@ -63,7 +84,11 @@ export default function RegisterPage() {
 
     try {
       setLoading(true);
-      await registerUser(formData);
+      const normalizedPhone = normalizeEgyptPhone(formData.phone);
+      await registerUser({
+        ...formData,
+        phone: normalizedPhone,
+      });
       router.push("/auth/login");
     } catch (err) {
       setApiError(err.message);
@@ -135,6 +160,24 @@ export default function RegisterPage() {
                   </div>
                   {errors.email && (
                     <small className="text-danger d-block mt-1">{errors.email}</small>
+                  )}
+                </div>
+
+                <div className="mb-3">
+                  <label className="form-label fw-semibold">Phone</label>
+                  <div className="auth-input-wrap">
+                    <i className="bi bi-telephone"></i>
+                    <input
+                      type="tel"
+                      name="phone"
+                      className="form-control auth-input"
+                      placeholder="e.g. 01012345678"
+                      value={formData.phone}
+                      onChange={handleChange}
+                    />
+                  </div>
+                  {errors.phone && (
+                    <small className="text-danger d-block mt-1">{errors.phone}</small>
                   )}
                 </div>
 

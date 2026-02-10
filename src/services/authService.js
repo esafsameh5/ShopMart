@@ -8,39 +8,71 @@ async function parseJsonSafe(response) {
   }
 }
 
-function generateAutoPhone() {
-  const suffix = Math.floor(Math.random() * 100000000)
-    .toString()
-    .padStart(8, "0");
-  return `010${suffix}`;
+function isRetryableStatus(status) {
+  return status >= 500 || status === 429;
+}
+
+function wait(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 export async function registerUser(data) {
-  try {
-    const response = await fetch(`${BASE_URL}/auth/signup`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        name: data.name,
-        email: data.email,
-        password: data.password,
-        rePassword: data.rePassword,
-        phone: generateAutoPhone(),
-      }),
-    });
+  const MAX_REGISTER_RETRIES = 3;
 
-    const result = await parseJsonSafe(response);
+  for (let i = 0; i < MAX_REGISTER_RETRIES; i += 1) {
+    try {
+      const response = await fetch("/api/auth/signup", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          name: data.name,
+          email: data.email,
+          password: data.password,
+          rePassword: data.rePassword,
+          phone: data.phone,
+        }),
+      });
 
-    if (!response.ok) {
-      throw new Error(result?.message || "Registration failed");
+      const result = await parseJsonSafe(response);
+
+      if (response.ok) {
+        return result;
+      }
+
+      if (isRetryableStatus(response.status) && i < MAX_REGISTER_RETRIES - 1) {
+        await wait(300 * (i + 1));
+        continue;
+      }
+
+      const message = result?.message || "Registration failed";
+
+      if (response.status >= 500) {
+        throw new Error(
+          "Auth service is temporarily unavailable. Please try again."
+        );
+      }
+
+      throw new Error(message);
+    } catch (err) {
+      const message = err?.message || "";
+      const lowerMessage = message.toLowerCase();
+      const isNetworkError =
+        lowerMessage.includes("network") ||
+        lowerMessage.includes("failed to fetch") ||
+        lowerMessage.includes("fetch failed");
+
+      if (i < MAX_REGISTER_RETRIES - 1 && isNetworkError) {
+        await wait(300 * (i + 1));
+        continue;
+      }
+
+      throw new Error(message || "Network error during registration");
     }
-
-    return result;
-  } catch (err) {
-    throw new Error(err?.message || "Network error during registration");
   }
+
+  throw new Error("Registration failed");
 }
 
 export async function loginUser(data) {
@@ -69,27 +101,48 @@ export async function loginUser(data) {
 }
 
 export async function forgotPassword(email) {
-  try {
-    const response = await fetch(`${BASE_URL}/auth/forgotPasswords`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ email }),
-    });
+  const MAX_FORGOT_RETRIES = 3;
 
-    const result = await parseJsonSafe(response);
+  for (let i = 0; i < MAX_FORGOT_RETRIES; i += 1) {
+    try {
+      const response = await fetch("/api/auth/forgot-password", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email }),
+      });
 
-    if (!response.ok) {
+      const result = await parseJsonSafe(response);
+
+      if (response.ok) {
+        return result;
+      }
+
+      if (isRetryableStatus(response.status) && i < MAX_FORGOT_RETRIES - 1) {
+        await wait(300 * (i + 1));
+        continue;
+      }
+
       throw new Error(result?.message || "Failed to send reset code");
-    }
+    } catch (err) {
+      const message = err?.message || "";
+      const lowerMessage = message.toLowerCase();
+      const isNetworkError =
+        lowerMessage.includes("network") ||
+        lowerMessage.includes("failed to fetch") ||
+        lowerMessage.includes("fetch failed");
 
-    return result;
-  } catch (err) {
-    throw new Error(
-      err?.message || "Network error while sending reset code"
-    );
+      if (i < MAX_FORGOT_RETRIES - 1 && isNetworkError) {
+        await wait(300 * (i + 1));
+        continue;
+      }
+
+      throw new Error(message || "Network error while sending reset code");
+    }
   }
+
+  throw new Error("Failed to send reset code");
 }
 
 export async function verifyResetCode(resetCode) {
