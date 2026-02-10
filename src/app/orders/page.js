@@ -1,7 +1,8 @@
 "use client";
+export const dynamic = "force-dynamic";
 
 import { useEffect, useMemo, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import { useAuth } from "@/context/AuthContext";
 import { useLoading } from "@/context/LoadingContext";
@@ -9,15 +10,19 @@ import { getUserIdFromAuth, getUserOrders } from "@/services/orderService";
 
 export default function OrdersPage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
   const { user, token } = useAuth();
   const { showLoader, hideLoader } = useLoading();
 
   const [orders, setOrders] = useState([]);
   const [error, setError] = useState("");
+  const [justPlaced, setJustPlaced] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState(null);
 
-  const justPlaced = searchParams.get("placed") === "1";
-  const paymentMethod = searchParams.get("method");
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    setJustPlaced(params.get("placed") === "1");
+    setPaymentMethod(params.get("method"));
+  }, []);
 
   // Derive user id once from auth state to avoid repeated parsing.
   const userId = useMemo(() => getUserIdFromAuth(user, token), [user, token]);
